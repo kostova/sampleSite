@@ -1,0 +1,57 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" >
+		<script type='text/javascript' src="TelerikTestingWebAgent.js"> </script>
+	</head>
+	<body>
+		<script>	
+	
+			function PostToMainWindow(message, messageData) {
+				var msgAsString = telerik_testing_js_agent.JSON.stringify({ tsjs_message: message, tsjs_data: messageData });
+				window.top.postMessage(msgAsString, "*");		
+			}
+		
+			function HandleWindowMessage (e) {
+				var jObj = null;
+
+				try {
+					jObj = telerik_testing_js_agent.JSON.parse(e.data);
+				}
+				catch (ex) {
+				}
+
+				//Not a message we care about
+				if (!jObj || !jObj.tsjs_message || !jObj.tsjs_data) return;
+					
+				switch (jObj.tsjs_message) {
+					case 'getState':				
+						for(var storeKey in jObj.tsjs_data) {
+							jObj.tsjs_data[storeKey] = sessionStorage[storeKey];
+						}			
+						
+						PostToMainWindow('getStateResponse', jObj.tsjs_data);
+						break;
+						
+					case 'setState':
+						for(storeKey in jObj.tsjs_data) {
+							sessionStorage[storeKey] = jObj.tsjs_data[storeKey];
+						}			
+					
+						PostToMainWindow('setStateResponse', jObj.tsjs_data);
+						break;
+				}					
+			}
+						
+			//Attach to window message event
+			if (window.attachEvent) { //IE event model
+				window.attachEvent( "onmessage", HandleWindowMessage );
+			} else if (window.addEventListener){ //Mozilla, Opera and WebKit event model
+				window.addEventListener( "message", HandleWindowMessage, false );
+			}
+			
+			//Notify the main window stateStore is ready
+			PostToMainWindow('storageReady', null);
+		</script>
+	</body>
+</html>
